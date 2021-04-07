@@ -8,6 +8,9 @@ discord = "*"
 python-dotenv = "*"
 quart = "*"
 python-blizzardapi = "*"
+aiologger = "*"
+"discord.py" = "*"
+discord-ext-ipc = "*"
 
 [dev-packages]
 

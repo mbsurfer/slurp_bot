@@ -1,13 +1,15 @@
 # bot.py
 import os
 import json
-import asyncio
 import logging
+
+from logging.config import dictConfig
 from urllib.parse import urlparse
 
 import discord
+from discord.ext import commands, ipc
+from discord.utils import get
 
-from quart import Quart, request
 from dotenv import load_dotenv
 from blizzardapi import BlizzardApi
 
@@ -18,18 +20,72 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filemode="w",
 )
+log = logging.getLogger(__name__)
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD = os.getenv("DISCORD_GUILD")
+IPC_SECRET_KEY = os.getenv("IPC_SECRET_KEY")
+
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_GUILD = os.getenv("DISCORD_GUILD")
 
 BLIZZARD_CLIENT = os.getenv("BLIZZARD_CLIENT")
 BLIZZARD_SECRET = os.getenv("BLIZZARD_SECRET")
 
-app = Quart(__name__)
 
-client = discord.Client()
-blizzard_client = BlizzardApi(BLIZZARD_CLIENT, BLIZZARD_SECRET)
+class SlurpBot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ipc = ipc.Server(self, secret_key=IPC_SECRET_KEY)
+
+    async def on_ready(self):
+        print("SlurpBot is online.")
+        self.guild = self.get_guild(int(DISCORD_GUILD))
+
+    async def on_ipc_ready(self):
+        print("Ipc is ready.")
+
+    async def on_ipc_error(self, endpoint, error):
+        print(print(endpoint, "raised", error))
+
+
+slurp_bot = SlurpBot(command_prefix="!")
+
+
+@slurp_bot.ipc.route()
+async def submit_application(data):
+    """Webhook for posting application responses to discord
+
+    JSON payload:
+    name -- the character name
+    server
+    class
+    spec
+    covenant
+    armory -- the link to wow armory ie. https://worldofwarcraft.com/en-us/character/us/{server}/{name}
+    questions -- an array or questions and answers [{"q": "", "a": ""}, ...]
+    """
+    payload = data.payload
+    guild = slurp_bot.guild
+
+    applicant_category = discord.utils.get(
+        await guild.fetch_channels(), name="Applicants"
+    )
+    channel_name = payload["name"].lower()
+    channel = await create_applicant_channel(guild=guild, channel_name=channel_name)
+
+    # embed important character details
+    await channel.send(embed=await (embed_application_response(data=payload)))
+
+    # loop through the questions array
+    for question_and_answer in payload["questions"]:
+        await channel.send(
+            content=format_application_repsonse(
+                title=question_and_answer["q"],
+                descrption=question_and_answer["a"],
+            )
+        )
+
+    return "true"
 
 
 async def get_wow_character_image_from_url(url):
@@ -37,6 +93,8 @@ async def get_wow_character_image_from_url(url):
 
     url - https://worldofwarcraft.com/en-us/character/us/malganis/astrocamp
     """
+    blizzard_client = BlizzardApi(BLIZZARD_CLIENT, BLIZZARD_SECRET)
+
     parsed_armory_url = urlparse(url)
     path_parts = parsed_armory_url.path.strip("/").rsplit("/")
 
@@ -76,72 +134,17 @@ async def embed_application_response(data):
 async def create_applicant_channel(guild, channel_name):
     """Returns a new channel for the applicant."""
     # check if applicant channel already exists
-    channel = discord.utils.get((await guild.fetch_channels()), name=channel_name)
+    channel = discord.utils.get(await guild.fetch_channels(), name=channel_name)
     if channel is None:
         # Create a new text channel
-        channel = await guild.create_text_channel(
-            channel_name, category=applicant_category
-        )
-        logging.info(f"New channel created: {channel}")
+        channel = guild.create_text_channel(channel_name, category=applicant_category)
+        log.info(f"New channel created: {channel}")
     else:
-        logging.warning(f"Channel already exists: {channel}")
+        log.warning(f"Channel already exists: {channel}")
 
     return channel
 
 
-def authenticate_request(payload):
-    return payload["key"] == os.getenv("TOKEN")
-
-
-@app.before_serving
-async def before_serving():
-    loop = asyncio.get_event_loop()
-    await client.login(TOKEN)
-    loop.create_task(client.connect())
-    logging.info("SlurpBot is online.")
-
-
-@app.route("/submit_application", methods=["POST"])
-async def submit_application():
-    """Webhook for posting application responses to discord
-
-    JSON payload:
-    name -- the character name
-    server
-    class
-    spec
-    covenant
-    armory -- the link to wow armory ie. https://worldofwarcraft.com/en-us/character/us/{server}/{name}
-    questions -- an array or questions and answers [{"q": "", "a": ""}, ...]
-    """
-    logging.info("/submit_application post received.")
-    payload = await request.get_json()
-
-    # validate token
-    if authenticate_request(payload) == False:
-        logging.warning(f"Invalid key: {payload['key']}")
-        return "Bad Request", 400
-
-    guild = discord.utils.get(client.guilds, name=GUILD)
-    applicant_category = discord.utils.get(
-        (await guild.fetch_channels()), name="Applicants"
-    )
-    channel_name = payload["name"].lower()
-    channel = await create_applicant_channel(guild=guild, channel_name=channel_name)
-
-    # embed important character details
-    await channel.send(embed=await embed_application_response(data=payload))
-
-    # loop through the questions array
-    for question_and_answer in payload["questions"]:
-        await channel.send(
-            content=format_application_repsonse(
-                title=question_and_answer["q"],
-                descrption=question_and_answer["a"],
-            )
-        )
-
-    return "OK", 200
-
-
-app.run()
+if __name__ == "__main__":
+    slurp_bot.ipc.start()  # start the IPC Server
+    slurp_bot.run(DISCORD_TOKEN)
