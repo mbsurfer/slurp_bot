@@ -27,6 +27,7 @@ IPC_SECRET_KEY = os.getenv("IPC_SECRET_KEY")
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 DISCORD_GUILD = os.getenv("DISCORD_GUILD")
+DISCORD_CATEGORY = os.getenv("DISCORD_CATEGORY")
 
 BLIZZARD_CLIENT = os.getenv("BLIZZARD_CLIENT")
 BLIZZARD_SECRET = os.getenv("BLIZZARD_SECRET")
@@ -40,6 +41,9 @@ class SlurpBot(commands.Bot):
     async def on_ready(self):
         print("SlurpBot is online.")
         self.guild = self.get_guild(int(DISCORD_GUILD))
+
+        # Category where channel will get created
+        self.applicant_category = self.get_channel(int(DISCORD_CATEGORY))
 
     async def on_ipc_ready(self):
         print("Ipc is ready.")
@@ -67,9 +71,6 @@ async def submit_application(data):
     payload = data.payload
     guild = slurp_bot.guild
 
-    applicant_category = discord.utils.get(
-        await guild.fetch_channels(), name="Applicants"
-    )
     channel_name = payload["name"].lower()
     channel = await create_applicant_channel(guild=guild, channel_name=channel_name)
 
@@ -104,8 +105,11 @@ async def get_wow_character_image_from_url(url):
         region=region,
         locale=locale,
         realm_slug=realm_slug,
-        character_name=character_name,
+        character_name=character_name.lower(),
     )
+
+    print(resource)
+
     return resource["assets"][0]["value"]
 
 
@@ -137,7 +141,9 @@ async def create_applicant_channel(guild, channel_name):
     channel = discord.utils.get(await guild.fetch_channels(), name=channel_name)
     if channel is None:
         # Create a new text channel
-        channel = guild.create_text_channel(channel_name, category=applicant_category)
+        channel = await guild.create_text_channel(
+            channel_name, category=slurp_bot.applicant_category
+        )
         log.info(f"New channel created: {channel}")
     else:
         log.warning(f"Channel already exists: {channel}")
