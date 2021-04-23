@@ -12,7 +12,7 @@ aiologger = "*"
 "discord.py" = "*"
 discord-ext-ipc = "*"
 validators = "*"
-gunicorn = "*"
+hypercorn = "*"
 
 [dev-packages]
 
