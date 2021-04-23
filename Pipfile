@@ -11,6 +11,8 @@ python-blizzardapi = "*"
 aiologger = "*"
 "discord.py" = "*"
 discord-ext-ipc = "*"
+validators = "*"
+gunicorn = "*"
 
 [dev-packages]
 

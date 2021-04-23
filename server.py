@@ -26,6 +26,11 @@ def authenticate_request(key):
     return key == os.getenv("API_KEY")
 
 
+@app.route("/test")
+def test():
+    return "this is a test"
+
+
 @app.route("/submit_application", methods=["POST"])
 async def submit_application():
     app.logger.info("/submit_application post received.")

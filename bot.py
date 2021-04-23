@@ -3,6 +3,8 @@ import os
 import json
 import logging
 
+import validators
+
 from logging.config import dictConfig
 from urllib.parse import urlparse
 
@@ -108,29 +110,37 @@ async def get_wow_character_image_from_url(url):
         character_name=character_name.lower(),
     )
 
-    print(resource)
-
     return resource["assets"][0]["value"]
 
 
 def format_application_repsonse(title, descrption):
-    return f"**__{title}__**\n{descrption}"
+    return f"**__{title}__**\n{descrption}\n\n"
 
 
 async def embed_application_response(data):
 
-    embed = discord.Embed(
-        title=data["name"], url=data["armory"], description=data["server"]
-    )
+    embed = discord.Embed(title=data["name"], description=data["server"])
 
-    thumbnail_url = await get_wow_character_image_from_url(url=data["armory"])
-    embed.set_thumbnail(url=thumbnail_url)
+    # Only try to set the URL and image is an armory link is provided
+    if validators.url(data["armory"]):
+        embed.url = data["armory"]
+        try:
+            thumbnail_url = await get_wow_character_image_from_url(url=data["armory"])
+            embed.set_thumbnail(url=thumbnail_url)
+        except:
+            log.warning(
+                f"There was an error generating the thumnail from the armory URL."
+            )
+            pass
 
     embed.add_field(name="Class", value=data["class"], inline=True)
     embed.add_field(name="Spec", value=data["spec"], inline=True)
     embed.add_field(name="Covenant", value=data["covenant"], inline=True)
 
     embed.add_field(name="Logs", value=data["logs"], inline=False)
+    embed.add_field(
+        name="Discord Username", value=data["discord_username"], inline=False
+    )
 
     return embed
 
