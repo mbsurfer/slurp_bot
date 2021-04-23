@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -e
+
+PS_TYPE=$(echo "$DYNO" | cut -d. -f1)
+PS_PROCFILE="Procfile.$PS_TYPE"
+
+if [ ! -f "$PS_PROCFILE" ]; then
+  echo "$PS_PROCFILE does not exist." >&2
+  exit 1
+fi
+
+SERVICE_DIR=".service.$PS_TYPE"
+rm -rf "$SERVICE_DIR"
+mkdir "$SERVICE_DIR"
+
+bin/runsvdir-populate-service-dir "$SERVICE_DIR" "$PS_PROCFILE"
+
+exec runsvdir "$SERVICE_DIR"
