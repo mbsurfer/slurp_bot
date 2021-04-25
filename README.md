@@ -1,0 +1,1 @@
+docker run -p 5000:5000 --name slurp-bot -e PORT=5000 slurp-bot
