@@ -37,6 +37,8 @@ async def submit_application():
 
     payload = await request.get_json()
 
+    logging.debug("Received payload", payload)
+
     # validate token
     if authenticate_request(payload["key"]) == False:
         app.logger.warning(f"Invalid key: {payload['key']}")
