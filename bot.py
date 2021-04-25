@@ -38,7 +38,7 @@ BLIZZARD_SECRET = os.getenv("BLIZZARD_SECRET")
 class SlurpBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ipc = ipc.Server(self, secret_key=IPC_SECRET_KEY)
+        self.ipc = ipc.Server(self, secret_key=IPC_SECRET_KEY, host="0.0.0.0")
 
     async def on_ready(self):
         print("SlurpBot is online.")
