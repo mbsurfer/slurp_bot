@@ -6,4 +6,4 @@ RUN pip install -r /tmp/requirements.txt
 COPY . /tmp/app/
 RUN pip install /tmp/app
 RUN chmod a+x /tmp/app/run.sh
-CMD ["./tmp/app/run.sh"]
+CMD ["/tmp/app/run.sh"]
