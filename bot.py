@@ -73,7 +73,7 @@ async def submit_application(data):
     payload = data.payload
     guild = slurp_bot.guild
 
-    channel_name = payload["name"].lower()
+    channel_name = f"{payload['name'].lower()}-{payload['class'].lower()}"
     channel = await create_applicant_channel(guild=guild, channel_name=channel_name)
 
     # embed important character details
