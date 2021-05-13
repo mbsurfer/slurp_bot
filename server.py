@@ -38,10 +38,7 @@ async def submit_application():
 
     payload = await request.get_json()
 
-    app.logger.error(type(payload))
-    app.logger.error(payload)
-
-    app.logger.error(json.dumps(payload))
+    app.logger.info(json.dumps(payload))
 
     # validate token
     if authenticate_request(payload["key"]) == False:
