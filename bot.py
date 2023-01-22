@@ -66,7 +66,6 @@ async def submit_application(data):
     server
     class
     spec
-    covenant
     armory -- the link to wow armory ie. https://worldofwarcraft.com/en-us/character/us/{server}/{name}
     questions -- an array or questions and answers [{"q": "", "a": ""}, ...]
     """
@@ -135,7 +134,7 @@ async def embed_application_response(data):
 
     embed.add_field(name="Class", value=data["class"], inline=True)
     embed.add_field(name="Spec", value=data["spec"], inline=True)
-    embed.add_field(name="Covenant", value=data["covenant"], inline=True)
+    # embed.add_field(name="Covenant", value=data["covenant"], inline=True)
 
     embed.add_field(name="Logs", value=data["logs"], inline=False)
     embed.add_field(
